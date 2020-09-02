@@ -9,6 +9,50 @@ LABEL org.opencontainers.image.source="https://github.com/giovtorres/slurm-docke
 ARG SLURM_TAG=slurm-19-05-1-2
 ARG GOSU_VERSION=1.11
 
+
+RUN yum install -y squashfs-tools  <<< base
+RUN yum install -y wget
+RUN yum install -y gcc
+RUN yum install -y make
+RUN yum install -y libarchive-devel
+
+# RUN VERSION=2.5.2 && \
+#     wget https://github.com/singularityware/singularity/releases/download/$VERSION/singularity-$VERSION.tar.gz &&\
+#     tar xvf singularity-$VERSION.tar.gz && \
+#     cd singularity-$VERSION && \
+#     ./configure --prefix=/usr/local && \
+#     make && \
+#     make install
+
+RUN yum update -y && \
+     yum groupinstall -y 'Development Tools' && \
+     yum install -y \
+     openssl-devel \
+     libuuid-devel \
+     libseccomp-devel \
+     wget \
+     squashfs-tools \
+     cryptsetup
+
+RUN export VERSION=1.13.5 OS=linux ARCH=amd64 && \
+    wget https://dl.google.com/go/go$VERSION.$OS-$ARCH.tar.gz && \
+    tar -C /usr/local -xzvf go$VERSION.$OS-$ARCH.tar.gz && \
+    rm go$VERSION.$OS-$ARCH.tar.gz && \
+    echo 'export GOPATH=${HOME}/go' >> ~/.bashrc && \
+    echo 'export PATH=/usr/local/go/bin:${PATH}:${GOPATH}/bin' >> ~/.bashrc && \
+    source ~/.bashrc && \
+    export VERSION=3.5.2 && \
+    wget https://github.com/sylabs/singularity/releases/download/v${VERSION}/singularity-${VERSION}.tar.gz && \
+    tar -xzf singularity-${VERSION}.tar.gz && \
+    cd singularity && \
+    ls && \
+    go version  && \
+    ./mconfig && \
+    make -C ./builddir && \
+    make -C ./builddir install
+
+
+
 RUN set -ex \
     && yum makecache fast \
     && yum -y update \
@@ -40,8 +84,8 @@ RUN set -ex \
 RUN pip install Cython nose && pip3.4 install Cython nose
 
 RUN set -ex \
-    && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64" \
-    && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-amd64.asc" \
+    && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-amd64" \
+    && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-amd64.asc" \
     && export GNUPGHOME="$(mktemp -d)" \
     && gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
     && gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
@@ -86,7 +130,15 @@ RUN set -x \
 COPY slurm.conf /etc/slurm/slurm.conf
 COPY slurmdbd.conf /etc/slurm/slurmdbd.conf
 
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# RUN yum install -y openssh-server && \
+#     yum install -y openssh-clients && \
+#     systemctl start sshd && \
+#     systemctl enable sshd && \
+#     systemctl status sshd 
+
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 CMD ["slurmdbd"]
+
